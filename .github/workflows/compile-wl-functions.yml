@@ -1,0 +1,140 @@
+name: Compile WL function(s)
+on: [push]
+jobs:
+  FunctionCompile-Windows-x86-64:
+    runs-on: windows-latest
+    env:
+      WOLFRAM_SYSTEM_ID: Windows-x86-64
+      WOLFRAMENGINE_INSTALL_MSI_DOWNLOAD_URL: https://files.wolframcdn.com/packages/winget/12.2.0.0/WolframEngine_12.2.0_WIN.msi
+      WOLFRAMENGINE_CACHE_KEY: WolframEngine-A
+      WOLFRAMENGINE_INSTALLATION_SUBDIRECTORY: WolframEngine
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Cache/restore Wolfram Engine install
+        id: cache-restore
+        uses: actions/cache@v2
+        env:
+          WOLFRAMENGINE_INSTALLATION_DIRECTORY: '${{ runner.temp }}\${{ env.WOLFRAMENGINE_INSTALLATION_SUBDIRECTORY }}'
+        with:
+          path: ${{ env.WOLFRAMENGINE_INSTALLATION_DIRECTORY }}
+          key: wolframengine-${{ env.WOLFRAM_SYSTEM_ID }}-${{ env.WOLFRAMENGINE_CACHE_KEY }}
+
+      - name: Download and install Wolfram Engine
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        env:
+          WOLFRAMENGINE_INSTALLATION_DIRECTORY: '${{ runner.temp }}\${{ env.WOLFRAMENGINE_INSTALLATION_SUBDIRECTORY }}'
+          WOLFRAMENGINE_INSTALL_MSI_PATH: '${{ runner.temp }}\WolframEngine-Install.msi'
+          WOLFRAMENGINE_INSTALL_LOG_PATH: '${{ runner.temp }}\WolframEngine-Install.log'
+        run: |
+          echo 'Downloading Wolfram Engine installer...'
+          $msiFile = '${{ env.WOLFRAMENGINE_INSTALL_MSI_PATH }}'
+          $logFile = '${{ env.WOLFRAMENGINE_INSTALL_LOG_PATH }}'
+
+          Import-Module BitsTransfer
+          Start-BitsTransfer '${{ env.WOLFRAMENGINE_INSTALL_MSI_DOWNLOAD_URL }}' $msiFile
+          echo 'Downloaded Wolfram Engine installer.'
+
+          $DataStamp = get-date -Format yyyyMMddTHHmmss
+          $MSIArguments = @(
+              "/i"
+              ('"{0}"' -f $msiFile)
+              'INSTALLLOCATION="${{ env.WOLFRAMENGINE_INSTALLATION_DIRECTORY }}"'
+              "/qn"
+              "/norestart"
+              "/L*v"
+              $logFile
+          )
+          echo 'Installing Wolfram Engine...'
+          Start-Process "msiexec.exe" -ArgumentList $MSIArguments -Wait -NoNewWindow
+          echo 'Installed Wolfram Engine.'
+
+      - name: Compile function
+        env:
+          WOLFRAMENGINE_INSTALLATION_DIRECTORY: '${{ runner.temp }}\${{ env.WOLFRAMENGINE_INSTALLATION_SUBDIRECTORY }}'
+          WOLFRAMINIT: "-pwfile !cloudlm.wolfram.com -entitlement ${{ secrets.WOLFRAM_LICENSE_ENTITLEMENT_ID }}"
+        run: |
+          $env:Path += ';${{ env.WOLFRAMENGINE_INSTALLATION_DIRECTORY }}\'
+
+          wolfram -script ./compile.wls
+
+      - name: Archive compiled libraries
+        uses: actions/upload-artifact@v2
+        with:
+          name: CompiledFunctionLibraries-${{ env.WOLFRAM_SYSTEM_ID }}
+          path: |
+            compiled/
+          if-no-files-found: error
+
+  FunctionCompile-MacOSX-x86-64:
+    runs-on: macos-latest
+    env:
+      WOLFRAM_SYSTEM_ID: MacOSX-x86-64
+      WOLFRAMENGINE_CACHE_KEY: WolframEngine-A
+      WOLFRAMENGINE_INSTALLATION_DIRECTORY: "/Applications/Wolfram Engine.app"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Cache/restore Wolfram Engine install
+        id: cache-restore
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.WOLFRAMENGINE_INSTALLATION_DIRECTORY }}
+          key: wolframengine-${{ env.WOLFRAM_SYSTEM_ID }}-${{ env.WOLFRAMENGINE_CACHE_KEY }}
+
+      - name: Install Wolfram Engine
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        run: |
+          echo 'Installing Wolfram Engine...'
+          brew install --cask wolfram-engine
+          echo 'Installed Wolfram Engine.'
+
+      - name: Compile function
+        env:
+          WOLFRAMENGINE_EXECUTABLES_DIRECTORY: "${{ env.WOLFRAMENGINE_INSTALLATION_DIRECTORY }}/Contents/Resources/Wolfram Player.app/Contents/MacOS"
+          WOLFRAMSCRIPT_ENTITLEMENTID: ${{ secrets.WOLFRAM_LICENSE_ENTITLEMENT_ID }}
+          WOLFRAMSCRIPT_KERNELPATH: "${{ env.WOLFRAMENGINE_INSTALLATION_DIRECTORY }}/Contents/MacOS/WolframKernel"
+        run: |
+          export PATH="${{ env.WOLFRAMENGINE_EXECUTABLES_DIRECTORY }}:$PATH"
+
+          wolframscript -debug -verbose -script ./compile.wls
+
+      - name: Archive compiled libraries
+        uses: actions/upload-artifact@v2
+        with:
+          name: CompiledFunctionLibraries-${{ env.WOLFRAM_SYSTEM_ID }}
+          path: |
+            compiled/
+          if-no-files-found: error
+
+  FunctionCompile-Linux-x86-64:
+    runs-on: ubuntu-latest
+    container:
+      image: wolframresearch/wolframengine:latest
+      options: --user root
+    env:
+      WOLFRAM_SYSTEM_ID: Linux-x86-64
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: |
+          apt-get -y update
+          apt-get -y install build-essential
+
+      - name: Compile function
+        env:
+          WOLFRAMSCRIPT_ENTITLEMENTID: ${{ secrets.WOLFRAM_LICENSE_ENTITLEMENT_ID }}
+        run: |
+          wolframscript -script ./compile.wls
+
+      - name: Archive compiled libraries
+        uses: actions/upload-artifact@v2
+        with:
+          name: CompiledFunctionLibraries-${{ env.WOLFRAM_SYSTEM_ID }}
+          path: |
+            compiled/
+          if-no-files-found: error
