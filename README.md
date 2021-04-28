@@ -11,11 +11,11 @@ These shared libraries are suitable for linking into external programs, and can 
 
 Click the **Use this template** button above the file listing view:
 
-_[[image]]_
+![Template repository file listing view with "Use this template" button](.github/images/1-Use-this-template.png)
 
 Enter a name for your new repository and click **Create repository from template**:
 
-_[[image]]_
+!["Create a new repository from WL-FunctionCompile-CI-Template" screen with "Repository name" field and "Create repository from template" button](.github/images/2-Create-repository-from-template.png)
 
 This will copy the contents of the template repository, including the GitHub Actions configuration and this README.md file, into a new repository in your account (or the selected organization account).
 
@@ -38,20 +38,23 @@ Creating an entitlement requires access to the Wolfram Language.
 If you do not have [Wolfram Mathematica](https://www.wolfram.com/mathematica/), a [Wolfram|One](https://www.wolfram.com/wolfram-one/) subscription or another Wolfram Language product, you can sign up for a free [Wolfram Cloud Basic](https://www.wolframcloud.com/) subscription and create an entitlement from within a cloud notebook.
 
 Use the [`CreateLicenseEntitlement` function](https://reference.wolfram.com/language/ref/CreateLicenseEntitlement.html) to create a new license entitlement linked to your Wolfram Account:
-```
+```wl
 In[1]:= entitlement = CreateLicenseEntitlement[<|
     "StandardKernelLimit" -> 6, 
     "LicenseExpiration" -> Quantity[1, "Hours"], 
     "EntitlementExpiration" -> Quantity[1, "Years"]
 |>]
 
-Out[1]= LicenseEntitlementObject[O-WSTD-DA42-GKX4Z6NR2DSZR, <|
-    PolicyID -> WSTD, PolicyName -> Standard, BillingInterval -> 900 seconds,
-    KernelCosts -> <|Standard -> 4. credits per hour, Parallel -> 4. credits per hour|>,
-    KernelLimits -> <|Standard -> 6, Parallel -> 0|>,
-    CreationDate -> DateObject[{2021, 4, 26, 14, 28, 18.}, Instant, Gregorian, -5.],
-    ExpirationDate -> DateObject[{2022, 4, 26, 14, 28, 18.}, Instant, Gregorian, -5.],
-    LicenseExpirationDuration -> 1 day 0. hours
+Out[1]= LicenseEntitlementObject["O-WSTD-DA42-GKX4Z6NR2DSZR", <|
+    "PolicyID" -> "WSTD", "PolicyName" -> "Standard", "BillingInterval" -> Quantity[900, "Seconds"],
+    "KernelCosts" -> <|
+        "Standard" -> Quantity[4., "Credits"/"Hours"],
+        "Parallel" -> Quantity[4., "Credits"/"Hours"]
+    |>,
+    "KernelLimits" -> <|"Standard" -> 6, "Parallel" -> 0|>,
+    "CreationDate" -> DateObject[{2021, 4, 26, 14, 28, 18.}, "Instant", "Gregorian", -4.],
+    "ExpirationDate" -> DateObject[{2022, 4, 26, 14, 28, 18.}, "Instant", "Gregorian", -4.],
+    "LicenseExpirationDuration" -> Quantity[MixedMagnitude[{0, 1.}], MixedUnit[{"Days", "Hours"}]]
 |>]
 ```
 
@@ -59,7 +62,7 @@ Take note of the returned entitlement ID (`O-WSTD-DA42-GKX4Z6NR2DSZR` above); yo
 
 The meanings of the specified entitlement settings are:
 - `"StandardKernelLimit" -> 6`: Up to six kernels may run concurrently. (This means two copies of the three-OS compilation workflow.)
-- `"LicenseExpiration" -> Quantity[1, "Hours"]`: Each kernel may run for up to one hour.
+- `"LicenseExpiration" -> Quantity[1, "Hours"]`: Each kernel may run for up to one hour at a time.
 - `"EntitlementExpiration" -> Quantity[1, "Years"]`: The entitlement expires one year after creation. (This means you must create a new entitlement and replace the GitHub secret once a year.)
 
 You may adjust these settings as needed for your use case. For more information, see the documentation for [`CreateLicenseEntitlement`](https://reference.wolfram.com/language/ref/CreateLicenseEntitlement.html).
@@ -73,13 +76,13 @@ This would involve modifying the jobs in the [workflow file](.github/workflows/c
 A license entitlement ID is a form of license key, and so for reasons of security should not be stored directly in the source tree of a repository, especially if that repository is public.
 We will instead store it in an [encrypted repository secret](https://docs.github.com/en/actions/reference/encrypted-secrets) that can be accessed by code running in GitHub Actions jobs.
 
-Open the **Actions secrets** repository settings page (Settings > Secrets > Actions) and click **New repository secret**:
+Open the **Actions secrets** repository settings page (**Settings > Secrets > Actions**) and click **New repository secret**:
 
-_[[image]]_
+!["Settings > Secrets > Actions" screen with "New repository secret" button](.github/images/3-New-repository-secret.png)
 
 Name the new secret `WOLFRAM_LICENSE_ENTITLEMENT_ID` and paste your entitlement ID from step 2 as the value, then click **Add secret**:
 
-_[[image]]_
+!["Actions secrets / New secret" screen with "Name" and "Value" fields and "Add secret" button](.github/images/4-Add-secret.png)
 
 Make sure to remove any extraneous whitespace from either side of the entitlement ID.
 
@@ -92,13 +95,13 @@ Files in subdirectories of `/functions` (e.g. `/functions/subdir/file.wl`) are i
 
 Each function source file (e.g. [`/functions/addone.wl`](functions/addone.wl)) should return a [`Function`](https://reference.wolfram.com/language/ref/Function.html) expression with the appropriate [type annotations](https://reference.wolfram.com/language/ref/Typed.html) for compilation with [`FunctionCompile`](https://reference.wolfram.com/language/ref/FunctionCompile.html)/[`FunctionCompileExportLibrary`](https://reference.wolfram.com/language/ref/FunctionCompileExportLibrary.html).
 
-You can commit a new function source file to your repository using the [Git command-line interface](https://docs.github.com/en/github/managing-files-in-a-repository/adding-a-file-to-a-repository-using-the-command-line) or a graphical Git tool like [GitHub Desktop](https://desktop.github.com/),
+You can commit and push a new function source file to your repository using the [Git command-line interface](https://docs.github.com/en/github/managing-files-in-a-repository/adding-a-file-to-a-repository-using-the-command-line) or a graphical Git tool like [GitHub Desktop](https://desktop.github.com/),
 or you can use [the GitHub web interface](https://docs.github.com/en/github/managing-files-in-a-repository/creating-new-files).
 The web interface is the easiest option for a quick test of your newly configured repository.
 
-Navigate to the [`/functions`](functions) directory and click **Add file > Create new file**:
+Navigate to the [`/functions`](functions) directory listing and click **Add file > Create new file**:
 
-_[[image]]_
+!["/functions" directory listing with "Add file > Create new file" button](.github/images/5-Create-new-file.png)
 
 Name the file `power.wl` and paste the following as its contents:
 ```wl
@@ -107,23 +110,23 @@ Function[Typed[num, "MachineInteger"], num ^ num]
 
 Optionally edit the commit message, and then click **Commit new file**:
 
-_[[image]]_
+!["Commit new file" screen showing new file named "power.wl" with "Function[...]" as contents](.github/images/6-Commit-new-file.png)
 
 
 ### 5. Download and use a compiled function library
 
 If you switch to the **Actions** tab, you should see the new workflow run triggered by your commit in step 4:
 
-_[[image]]_
+!["Actions" tab showing workflow run triggered by a new commit](.github/images/7-Workflow-run-list.png)
 
 Click on the run to see the status of each job in the run:
 
-_[[image]]_
+![Workflow run screen showing details of an in-progress run](.github/images/8-Workflow-run-detail.png)
 
 This initial run may take 10-15 minutes to finish.
 Once all jobs succeed, the produced artifacts will be displayed beneath the list of jobs:
 
-_[[image]]_
+![Workflow run screen showing a successful run with artifacts for Linux, MacOSX, and Windows platforms](.github/images/9-Workflow-run-detail-artifacts.png)
 
 Each artifact is a compressed ZIP file containing the compiled function libraries for the platform indicated in its name.
 Download and uncompress the artifact for your platform of choice.
