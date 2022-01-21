@@ -5,7 +5,7 @@ jobs:
     runs-on: windows-latest
     env:
       WOLFRAM_SYSTEM_ID: Windows-x86-64
-      WOLFRAMENGINE_INSTALL_MSI_DOWNLOAD_URL: https://files.wolframcdn.com/packages/winget/12.2.0.0/WolframEngine_12.2.0_WIN.msi
+      WOLFRAMENGINE_INSTALL_MSI_DOWNLOAD_URL: https://files.wolframcdn.com/packages/winget/13.0.0.0/WolframEngine_13.0.0_WIN.msi
       WOLFRAMENGINE_CACHE_KEY: WolframEngine-A
       WOLFRAMENGINE_INSTALLATION_SUBDIRECTORY: WolframEngine
     steps:
