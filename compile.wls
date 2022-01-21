@@ -84,7 +84,7 @@ compilationResults = functionPathsToCompile // Map[
         ];
 
         Print@TemplateApply[
-            "Successfully function from '`1`' to '`2`'.",
+            "Successfully compiled function from '`1`' to '`2`'.",
             {functionPath, compiledFunctionPath}
         ];
 
